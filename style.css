@@ -1,0 +1,53 @@
+/* --- ESTILO GERAL --- */
+.hidden { display: none; }
+.animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- FILTROS DO GLOSSÁRIO --- */
+.filter-btn {
+    padding: 8px 18px;
+    background: #f3f4f6;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4b5563;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.filter-btn:hover { background: #e5e7eb; }
+
+.active-filter {
+    background: #1e3a8a !important;
+    color: white !important;
+    box-shadow: 0 4px 10px rgba(30, 58, 138, 0.3);
+}
+
+/* --- CARDS DO GLOSSÁRIO --- */
+#grid-glossario > div {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#grid-glossario > div:hover {
+    transform: translateY(-6px);
+    border-color: #3b82f6;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+/* --- ESTILO DOS MODAIS --- */
+#modal-box {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* --- CUSTOMIZAÇÃO DE INPUTS (SIMULADOR) --- */
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+#load-list::-webkit-scrollbar { width: 4px; }
+#load-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
