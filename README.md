@@ -42,6 +42,7 @@ projeto-mecanica/
 ├── style.css       # Estilizações, animações e filtros
 ├── script.js       # Banco de dados e lógica de cálculo
 └── img/            # Pasta com as ilustrações técnicas (.png/.jpg)
+```
 
 ---
 
