@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mecânica Poli - Projeto Final</title>
+    <title>Mecânica Poli - Equações por Trechos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -15,7 +15,7 @@
     <nav class="bg-blue-900 text-white p-4 shadow-xl sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold tracking-tight">🏗️ MECÂNICA PEF-3208</h1>
-            <div class="space-x-4 md:space-x-8">
+            <div class="space-x-4">
                 <button onclick="showSection('glossario')" class="hover:text-blue-300 transition font-medium">Glossário</button>
                 <button onclick="showSection('simulador')" class="hover:text-blue-300 transition font-medium">Simulador Pro</button>
             </div>
@@ -27,14 +27,12 @@
         <section id="glossario" class="block animate-fadeIn">
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-black text-blue-900">Conceitos Fundamentais</h2>
-                <p class="text-gray-500 italic">Explore a teoria por trás da mecânica das estruturas</p>
+                <p class="text-gray-500 italic">Explore a teoria das estruturas</p>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8 space-y-4">
                 <div class="relative max-w-xl mx-auto">
-                    <input type="text" id="search-input" placeholder="O que você deseja aprender?" 
-                           oninput="filterContent()" 
-                           class="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all">
+                    <input type="text" id="search-input" placeholder="Pesquisar termo..." oninput="filterContent()" class="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all">
                     <span class="absolute left-4 top-3.5 text-gray-400">🔍</span>
                 </div>
                 <div id="category-filters" class="flex flex-wrap justify-center gap-2"></div>
@@ -46,7 +44,7 @@
         <section id="simulador" class="hidden animate-fadeIn">
             <div class="text-center mb-10">
                 <h2 class="text-4xl font-black text-blue-900 mb-2">Simulador Estrutural</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto uppercase tracking-widest text-sm font-bold">Análise Dinâmica de Esforços em Vigas Isostáticas</p>
+                <p class="text-gray-600 uppercase tracking-widest text-sm font-bold">Equações Definidas por Trechos</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -55,56 +53,50 @@
                         <h3 class="text-xl font-bold text-blue-900 border-b pb-2">Configurações</h3>
                         
                         <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-2">Tipo de Apoio</label>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-2">Apoio</label>
                             <select id="beam-type" onchange="calculateAll()" class="w-full p-3 border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="biapoiada">Viga Biapoiada (Apoios Fixo e Móvel)</option>
-                                <option value="balanco">Viga em Balanço (Engaste Único)</option>
+                                <option value="biapoiada">Biapoiada (Apoio Fixo/Móvel)</option>
+                                <option value="balanco">Em Balanço (Engaste)</option>
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-2">Comprimento total (L) [m]</label>
-                            <input type="number" id="beam-L" value="10" step="0.5" onchange="calculateAll()" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-2">Comprimento (L) [m]</label>
+                            <input type="number" id="beam-L" value="10" step="0.5" onchange="calculateAll()" class="w-full p-3 border rounded-xl outline-none">
                         </div>
 
                         <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
-                            <h4 class="font-bold text-sm text-blue-800">NOVA CARGA PONTUAL</h4>
+                            <h4 class="font-bold text-sm text-blue-800 uppercase">Inserir Carga</h4>
                             <div class="grid grid-cols-2 gap-2">
-                                <input type="number" id="load-p" placeholder="P [kN]" class="p-2 border rounded-lg outline-none">
-                                <input type="number" id="load-a" placeholder="Pos [m]" class="p-2 border rounded-lg outline-none">
+                                <input type="number" id="load-p" placeholder="P [kN]" class="p-2 border rounded-lg">
+                                <input type="number" id="load-a" placeholder="Pos [m]" class="p-2 border rounded-lg">
                             </div>
-                            <select id="load-dir" class="w-full p-2 border rounded-lg outline-none bg-white">
-                                <option value="y">Vertical (Fletora)</option>
-                                <option value="x">Horizontal (Axial)</option>
+                            <select id="load-dir" class="w-full p-2 border rounded-lg bg-white">
+                                <option value="y">Vertical (Y)</option>
+                                <option value="x">Horizontal (X)</option>
                             </select>
-                            <button onclick="addLoad()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md active:scale-95">
-                                + Inserir Força
-                            </button>
-                            <button onclick="resetSim()" class="w-full bg-gray-200 text-gray-700 py-2 rounded-xl font-bold hover:bg-gray-300 transition text-xs">
-                                🗑️ Limpar Tudo
-                            </button>
+                            <button onclick="addLoad()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-blue-700 transition active:scale-95">+ Adicionar Carga</button>
+                            <button onclick="resetSim()" class="w-full bg-gray-200 text-gray-700 py-2 rounded-xl font-bold text-xs hover:bg-gray-300 transition">Limpar Tudo</button>
                         </div>
 
-                        <div>
-                            <h4 class="font-bold text-xs uppercase text-gray-400 mb-3 tracking-widest">Cargas na Viga</h4>
-                            <div id="load-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
-                        </div>
+                        <div id="load-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
                     </div>
                 </div>
 
                 <div class="lg:col-span-8 space-y-6">
                     <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Diagrama de Esforço Cortante (V)</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Equações e Diagrama de Cortante (V)</p>
                         <canvas id="chartV" height="110"></canvas>
+                        <div id="equation-v" class="mt-4 p-4 bg-gray-50 rounded-xl text-center text-sm border border-dashed border-gray-300"></div>
                     </div>
 
                     <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Diagrama de Momento Fletor (M)</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Equações e Diagrama de Momento Fletor (M)</p>
                         <canvas id="chartM" height="110"></canvas>
+                        <div id="equation-m" class="mt-4 p-4 bg-gray-50 rounded-xl text-center text-sm border border-dashed border-gray-300"></div>
                     </div>
 
-                    <div id="result-summary" class="bg-blue-900 text-white p-8 rounded-3xl shadow-xl grid grid-cols-2 md:grid-cols-3 gap-6 text-center">
-                    </div>
+                    <div id="result-summary" class="bg-blue-900 text-white p-8 rounded-3xl shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6 text-center"></div>
                 </div>
             </div>
         </section>
@@ -112,7 +104,7 @@
 
     <div id="modal-container" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-all">
         <div id="modal-box" class="bg-white rounded-3xl max-w-3xl w-full p-8 relative shadow-2xl scale-95 transition-transform duration-200">
-            <button onclick="closeModal()" class="absolute top-5 right-5 text-gray-300 hover:text-red-500 text-2xl transition">✕</button>
+            <button onclick="closeModal()" class="absolute top-5 right-5 text-gray-300 hover:text-red-500 text-2xl">✕</button>
             <div id="modal-content"></div>
         </div>
     </div>
