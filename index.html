@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PEF-3208</title>
-    <link rel="icon" type="image/png" href="img/poli.png">
+    <link class="rounded" rel="icon" type="image/png" href="img/poli.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -16,10 +15,20 @@
     <nav class="bg-blue-900 text-white p-4 shadow-xl sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold tracking-tight">🏗️ MECÂNICA PEF-3208</h1>
-            <div class="space-x-4">
+            
+            <div class="hidden md:flex space-x-4">
                 <button onclick="showSection('glossario')" class="hover:text-blue-300 transition font-medium">Glossário</button>
                 <button onclick="showSection('simulador')" class="hover:text-blue-300 transition font-medium">Simulador Pro</button>
             </div>
+
+            <button onclick="toggleMobileMenu()" class="block md:hidden focus:outline-none text-2xl px-2 hover:text-blue-300 transition">
+                ☰
+            </button>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden flex flex-col space-y-2 mt-3 pb-2 border-t border-blue-800 pt-2 animate-fadeIn">
+            <button onclick="showSection('glossario'); toggleMobileMenu()" class="text-left w-full hover:text-blue-300 transition font-medium py-2 px-1">Glossário</button>
+            <button onclick="showSection('simulador'); toggleMobileMenu()" class="text-left w-full hover:text-blue-300 transition font-medium py-2 px-1">Simulador Pro</button>
         </div>
     </nav>
 
@@ -113,13 +122,13 @@
                     <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
                         <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Equações e Diagrama de Cortante (V)</p>
                         <canvas id="chartV" height="110"></canvas>
-                        <div id="equation-v" class="mt-4 p-4 bg-gray-50 rounded-xl text-center text-sm border border-dashed border-gray-300"></div>
+                        <div id="eq-v" class="mt-4 p-4 bg-gray-50 rounded-xl text-center text-sm border border-dashed border-gray-300"></div>
                     </div>
 
                     <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
                         <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Equações e Diagrama de Momento Fletor (M)</p>
                         <canvas id="chartM" height="110"></canvas>
-                        <div id="equation-m" class="mt-4 p-4 bg-gray-50 rounded-xl text-center text-sm border border-dashed border-gray-300"></div>
+                        <div id="eq-m" class="mt-4 p-4 bg-gray-50 rounded-xl text-center text-sm border border-dashed border-gray-300"></div>
                     </div>
 
                     <div id="result-summary" class="bg-blue-900 text-white p-8 rounded-3xl shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6 text-center"></div>
@@ -138,4 +147,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-

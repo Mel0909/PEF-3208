@@ -459,6 +459,14 @@ function renderSummary(ray, rby, ma, rax, type) {
 /* ==========================================================================
    8. INICIALIZAÇÃO DO SISTEMA
    ========================================================================== */
+
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
 window.onload = () => {
     currentLoadType = 'point';
     
