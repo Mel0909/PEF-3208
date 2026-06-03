@@ -102,8 +102,13 @@
                         <div id="load-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
                     </div>
                 </div>
-
                 <div class="lg:col-span-8 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-2 tracking-widest italic">Diagrama de Esforço Normal (N)</p>
+                        <canvas id="chartN" height="100"></canvas>
+                        <div id="eq-n" class="mt-4 p-3 bg-gray-50 rounded-lg text-xs font-serif overflow-x-auto text-center"></div>
+                    </div>
+
                     <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
                         <p class="text-[10px] font-bold text-gray-400 uppercase text-center mb-4 tracking-widest italic">Equações e Diagrama de Cortante (V)</p>
                         <canvas id="chartV" height="110"></canvas>

@@ -122,6 +122,7 @@ const GLOSSARIO = [
 let currentCategory = 'Todos';
 let loads = [];
 let currentLoadType = 'point';
+let chartN = null;
 let chartV = null;
 let chartM = null;
 
@@ -267,7 +268,7 @@ function updateLoadList() {
 function calculateAll() {
     const L = parseFloat(document.getElementById('beam-L').value);
     const type = document.getElementById('beam-type').value;
-    let labels = [], dataV = [], dataM = [];
+    let labels = [], dataN = [], dataV = [], dataM = [];
     let steps = 100;
 
     let Ra_y = 0, Rb_y = 0, Ma = 0, Ra_x = 0;
@@ -279,17 +280,14 @@ function calculateAll() {
             } else {
                 if (type === 'biapoiada') {
                     let rb = -(l.p * l.a) / L;
-                    Rb_y += rb;
-                    Ra_y += (-l.p - rb);
+                    Rb_y += rb; Ra_y += (-l.p - rb);
                 } else { 
-                    Ra_y -= l.p; 
-                    Ma -= (l.p * l.a); 
+                    Ra_y -= l.p; Ma -= (l.p * l.a); 
                 }
             }
         } else {
             const len = l.x2 - l.x1;
             const totalQ = 0.5 * (l.q1 + l.q2) * len; 
-            
             let centroidRel = Math.abs(l.q1 + l.q2) > 0.001 ? (len * (l.q1 + 2 * l.q2)) / (3 * (l.q1 + l.q2)) : len / 2;
             const globalCentroid = l.x1 + centroidRel;
 
@@ -297,8 +295,7 @@ function calculateAll() {
                 let rb = -(totalQ * globalCentroid) / L;
                 Rb_y += rb; Ra_y += (-totalQ - rb);
             } else { 
-                Ra_y -= totalQ; 
-                Ma -= (totalQ * globalCentroid); 
+                Ra_y -= totalQ; Ma -= (totalQ * globalCentroid); 
             }
         }
     });
@@ -307,11 +304,14 @@ function calculateAll() {
         let x = (i * L) / steps;
         labels.push(x.toFixed(2));
         
+        let Nx = -Ra_x;
         let Vx = Ra_y;
         let Mx = (type === 'balanco') ? -Ma + (Ra_y * x) : Ra_y * x;
 
         loads.forEach(l => {
-            if (l.type === 'point' && l.dir === 'y' && x >= l.a) {
+            if (l.type === 'point' && l.dir === 'x' && x >= l.a) {
+                Nx -= l.p;
+            } else if (l.type === 'point' && l.dir === 'y' && x >= l.a) {
                 Vx += l.p; 
                 Mx += l.p * (x - l.a);
             } else if (l.type === 'dist' && x >= l.x1) {
@@ -338,21 +338,22 @@ function calculateAll() {
                 }
             }
         });
+        dataN.push(Nx.toFixed(2));
         dataV.push(Vx.toFixed(2));
         dataM.push(Mx.toFixed(2));
     }
 
-    renderCharts(labels, dataV, dataM);
+    renderCharts(labels, dataN, dataV, dataM);
     renderSummary(Ra_y, Rb_y, Ma, Ra_x, type);
-    generatePiecewiseEquations(Ra_y, Ma, L, type);
+    generatePiecewiseEquations(Ra_y, Ma, Ra_x, L, type);
 }
 
 /* ==========================================================================
    7. GERADOR DE EQUAÇÕES POR TRECHOS
    ========================================================================== */
-function generatePiecewiseEquations(ra, ma, L, type) {
-    const stops = [0, ...new Set(loads.flatMap(l => l.type === 'point' ? (l.dir === 'y' ? [l.a] : []) : [l.x1, l.x2])), L].sort((a,b) => a - b);
-    let vPieces = [], mPieces = [];
+function generatePiecewiseEquations(ra, ma, rax, L, type) {
+    const stops = [0, ...new Set(loads.flatMap(l => l.type === 'point' ? [l.a] : [l.x1, l.x2])), L].sort((a,b) => a - b);
+    let nPieces = [], vPieces = [], mPieces = [];
 
     const formatPoly = (coeffs) => {
         let terms = [];
@@ -372,11 +373,14 @@ function generatePiecewiseEquations(ra, ma, L, type) {
     for (let i = 0; i < stops.length - 1; i++) {
         let x1 = stops[i], x2 = stops[i+1], mid = (x1 + x2) / 2;
         
+        let nCoeffs = [-rax, 0, 0];
         let vCoeffs = [ra, 0, 0];
         let mCoeffs = type === 'balanco' ? [-ma, ra, 0, 0] : [0, ra, 0, 0];
 
         loads.forEach(l => {
-            if (l.type === 'point' && l.dir === 'y' && mid >= l.a) {
+            if (l.type === 'point' && l.dir === 'x' && mid >= l.a) {
+                nCoeffs[0] -= l.p;
+            } else if (l.type === 'point' && l.dir === 'y' && mid >= l.a) {
                 vCoeffs[0] += l.p;
                 mCoeffs[0] -= (l.p * l.a);
                 mCoeffs[1] += l.p;
@@ -409,19 +413,23 @@ function generatePiecewiseEquations(ra, ma, L, type) {
         let range = `${x1.toFixed(1)} \\le x < ${x2.toFixed(1)}`;
         if (i === stops.length - 2) range = `${x1.toFixed(1)} \\le x \\le ${x2.toFixed(1)}`;
         
+        nPieces.push(`${formatPoly(nCoeffs)}, & \\text{se } ${range}`);
         vPieces.push(`${formatPoly(vCoeffs)}, & \\text{se } ${range}`);
         mPieces.push(`${formatPoly(mCoeffs)}, & \\text{se } ${range}`);
     }
 
-    const divV = document.getElementById('eq-v') || document.getElementById('equation-v');
-    const divM = document.getElementById('eq-m') || document.getElementById('equation-m');
+    const divN = document.getElementById('eq-n');
+    const divV = document.getElementById('eq-v');
+    const divM = document.getElementById('eq-m');
 
+    if (divN) divN.innerHTML = `$$ N(x) = \\begin{cases} ${nPieces.join('\\\\')} \\end{cases} $$`;
     if (divV) divV.innerHTML = `$$ V(x) = \\begin{cases} ${vPieces.join('\\\\')} \\end{cases} $$`;
     if (divM) divM.innerHTML = `$$ M(x) = \\begin{cases} ${mPieces.join('\\\\')} \\end{cases} $$`;
     if (window.MathJax) MathJax.typesetPromise();
 }
 
-function renderCharts(labels, v, m) {
+function renderCharts(labels, n, v, m) {
+    if (chartN) chartN.destroy();
     if (chartV) chartV.destroy();
     if (chartM) chartM.destroy();
 
@@ -435,6 +443,7 @@ function renderCharts(labels, v, m) {
         }
     });
 
+    chartN = config(document.getElementById('chartN'), 'N', n, '#10b981', false);
     chartV = config(document.getElementById('chartV'), 'V', v, '#3b82f6', false);
     chartM = config(document.getElementById('chartM'), 'M', m, '#ef4444', true);
 }
