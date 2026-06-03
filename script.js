@@ -1,5 +1,6 @@
-/*Dados do Glossário*/
-
+/* ==========================================================================
+   1. BANCO DE DADOS DO GLOSSÁRIO (Caminhos para 'img/')
+   ========================================================================== */
 const GLOSSARIO = [
     {
         "term": "Esforços Solicitantes",
@@ -101,7 +102,7 @@ const GLOSSARIO = [
     },
     {
         "term": "Flexão Normal Simples",
-        "definition": "Estado onde atuam apenas momentos fletores, sem esforço normal.",
+        "definition": "Estado onde atuam apenas momentos fletores, sem esfoço normal.",
         "description": "Uma viga que está apenas dobrando, como uma prateleira de livros.",
         "image": "img/flexao-normal-simples.png",
         "category": "Tensões"
@@ -115,65 +116,211 @@ const GLOSSARIO = [
     }
 ];
 
-let loads = [];
-let chartV = null, chartM = null;
+/* ==========================================================================
+   2. ESTADOS GLOBAIS E NAVEGAÇÃO
+   ========================================================================== */
 let currentCategory = 'Todos';
+let loads = [];
+let currentLoadType = 'point';
+let chartV = null;
+let chartM = null;
 
-/* --- NAVEGAÇÃO --- */
 function showSection(id) {
     document.getElementById('glossario').classList.toggle('hidden', id !== 'glossario');
     document.getElementById('simulador').classList.toggle('hidden', id !== 'simulador');
     if (id === 'simulador') calculateAll();
 }
 
-/* --- SIMULADOR: CARGAS E CÁLCULOS --- */
+/* ==========================================================================
+   3. LÓGICA DO GLOSSÁRIO (Renderização com Imagens Ampliadas)
+   ========================================================================== */
+function renderGrid(items) {
+    const grid = document.getElementById('grid-glossario');
+    grid.innerHTML = items.map(item => `
+        <div onclick="openModal(${GLOSSARIO.indexOf(item)})" class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl cursor-pointer flex flex-col items-center text-center group transition-all duration-300">
+            <img src="${item.image}" class="h-44 w-full object-contain mb-4 group-hover:scale-105 transition-transform" alt="${item.term}">
+            <span class="text-xs font-bold text-blue-500 uppercase tracking-wider mb-1">${item.category}</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">${item.term}</h3>
+            <p class="text-gray-500 text-sm line-clamp-2">${item.definition}</p>
+            <span class="mt-4 text-blue-600 font-bold text-xs uppercase tracking-wider">Clique para ver detalhes →</span>
+        </div>
+    `).join('');
+}
+
+function filterContent() {
+    const search = document.getElementById('search-input').value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const filtered = GLOSSARIO.filter(item => {
+        const matchesCat = (currentCategory === 'Todos' || item.category === currentCategory);
+        const text = (item.term + item.definition).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return matchesCat && text.includes(search);
+    });
+    renderGrid(filtered);
+}
+
+function setCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.toggle('active-filter', btn.innerText === cat));
+    filterContent();
+}
+
+/* ==========================================================================
+   4. LÓGICA DO MODAL (Pop-up de Detalhes)
+   ========================================================================== */
+function openModal(idx) {
+    const item = GLOSSARIO[idx];
+    const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <div class="grid md:grid-cols-2 gap-8 items-center">
+            <img src="${item.image}" class="w-full h-96 object-contain bg-gray-50 rounded-2xl p-4 shadow-inner">
+            <div>
+                <span class="text-blue-600 font-bold uppercase text-xs tracking-widest">${item.category}</span>
+                <h2 class="text-3xl font-black text-blue-900 mb-4">${item.term}</h2>
+                <p class="text-gray-700 mb-4"><strong>Definição Técnica:</strong> ${item.definition}</p>
+                <div class="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-500 italic text-blue-900">💡 ${item.description}</div>
+            </div>
+        </div>
+        ${item.formula ? `<div class="mt-8 p-6 bg-gray-900 text-white rounded-2xl text-center shadow-xl">
+            <p class="text-[10px] opacity-50 mb-2 uppercase tracking-widest">Expressão Matemática</p>
+            <div class="text-3xl font-serif">$$ ${item.formula} $$</div>
+        </div>` : ''}
+    `;
+    document.getElementById('modal-container').classList.remove('hidden');
+    setTimeout(() => document.getElementById('modal-box').classList.remove('scale-95'), 10);
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function closeModal() {
+    document.getElementById('modal-box').classList.add('scale-95');
+    setTimeout(() => document.getElementById('modal-container').classList.add('hidden'), 150);
+}
+
+/* ==========================================================================
+   5. LÓGICA DO SIMULADOR (Gerenciamento de Cargas e Inputs)
+   ========================================================================== */
+function setLoadType(type) {
+    currentLoadType = type;
+    document.getElementById('form-point').classList.toggle('hidden', type !== 'point');
+    document.getElementById('form-dist').classList.toggle('hidden', type !== 'dist');
+    
+    document.getElementById('btn-point').className = type === 'point' ? 'flex-1 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold' : 'flex-1 py-1 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold';
+    document.getElementById('btn-dist').className = type === 'dist' ? 'flex-1 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold' : 'flex-1 py-1 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold';
+}
+
 function addLoad() {
-    const p = parseFloat(document.getElementById('load-p').value);
-    const a = parseFloat(document.getElementById('load-a').value);
-    const dir = document.getElementById('load-dir').value;
     const L = parseFloat(document.getElementById('beam-L').value);
-    if (isNaN(p) || isNaN(a) || a < 0 || a > L) return;
-    loads.push({ id: Date.now(), p, a, dir });
-    loads.sort((a, b) => a.a - b.a); // Fundamental para equações por trechos
+    
+    if (currentLoadType === 'point') {
+        const p = parseFloat(document.getElementById('load-p').value);
+        const a = parseFloat(document.getElementById('load-a').value);
+        if (isNaN(p) || isNaN(a) || a < 0 || a > L) {
+            alert("Preencha os campos da carga pontual corretamente.");
+            return;
+        }
+        loads.push({ type: 'point', p, a, dir: 'y', id: Date.now() });
+    } else {
+        const q1 = parseFloat(document.getElementById('q1').value);
+        const q2 = parseFloat(document.getElementById('q2').value);
+        const x1 = parseFloat(document.getElementById('x1').value);
+        const x2 = parseFloat(document.getElementById('x2').value);
+        
+        if (isNaN(q1) || isNaN(q2) || isNaN(x1) || isNaN(x2) || x1 < 0 || x2 > L || x1 >= x2) {
+            alert("Preencha todos os campos da carga distribuída corretamente (Início deve ser menor que Fim).");
+            return;
+        }
+        loads.push({ type: 'dist', q1, q2, x1, x2, id: Date.now() });
+    }
+    
+    loads.sort((a, b) => (a.a !== undefined ? a.a : a.x1) - (b.a !== undefined ? b.a : b.x1));
     updateLoadList();
     calculateAll();
 }
 
-function resetSim() { loads = []; updateLoadList(); calculateAll(); }
-function removeLoad(id) { loads = loads.filter(l => l.id !== id); calculateAll(); updateLoadList(); }
-
-function updateLoadList() {
-    document.getElementById('load-list').innerHTML = loads.map(l => `
-        <div class="flex justify-between items-center bg-white p-2 border-l-4 border-blue-500 rounded shadow-sm mb-2 text-xs">
-            <span><b>${l.p}kN</b> em ${l.a}m (${l.dir.toUpperCase()})</span>
-            <button onclick="removeLoad(${l.id})" class="text-red-500 font-bold px-2">✕</button>
-        </div>`).join('');
+function resetSim() {
+    loads = [];
+    document.getElementById('load-p').value = '';
+    document.getElementById('load-a').value = '';
+    updateLoadList();
+    calculateAll();
 }
 
+function removeLoad(id) {
+    loads = loads.filter(l => l.id !== id);
+    updateLoadList();
+    calculateAll();
+}
+
+function updateLoadList() {
+    const list = document.getElementById('load-list');
+    list.innerHTML = loads.map(l => `
+        <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm mb-2 text-xs">
+            <span>${l.type === 'point' ? `<b>${l.p} kN</b> em ${l.a}m (Y)` : `<b>${l.q1}-${l.q2} kN/m</b> de ${l.x1} a ${l.x2}m`}</span>
+            <button onclick="removeLoad(${l.id})" class="text-red-500 font-bold px-2 hover:text-red-700">✕</button>
+        </div>
+    `).join('');
+}
+
+/* ==========================================================================
+   6. MOTOR DE CÁLCULO E FÍSICA ESTRUTURAL
+   ========================================================================== */
 function calculateAll() {
     const L = parseFloat(document.getElementById('beam-L').value);
     const type = document.getElementById('beam-type').value;
-    
+    let labels = [], dataV = [], dataM = [];
+    let steps = 100;
+
     let Ra_y = 0, Rb_y = 0, Ma = 0, Ra_x = 0;
     
-    // 1. Reações
     loads.forEach(l => {
-        if (l.dir === 'y') {
+        if (l.type === 'point') {
             if (type === 'biapoiada') {
                 let rb = (l.p * l.a) / L;
                 Rb_y += rb; Ra_y += (l.p - rb);
             } else { Ra_y += l.p; Ma += (l.p * l.a); }
-        } else { Ra_x += l.p; }
+        } else {
+            const len = l.x2 - l.x1;
+            const forceRect = Math.min(l.q1, l.q2) * len;
+            const forceTri = 0.5 * Math.abs(l.q2 - l.q1) * len;
+            const totalQ = forceRect + forceTri;
+            const dTri = l.q2 > l.q1 ? l.x1 + (2/3)*len : l.x1 + (1/3)*len;
+            const dRect = l.x1 + len/2;
+            const centroid = totalQ > 0 ? (forceRect * dRect + forceTri * dTri) / totalQ : 0;
+
+            if (type === 'biapoiada') {
+                let rb = (totalQ * centroid) / L;
+                Rb_y += rb; Ra_y += (totalQ - rb);
+            } else { Ra_y += totalQ; Ma += (totalQ * centroid); }
+        }
     });
 
-    // 2. Gráficos
-    let labels = [], dataV = [], dataM = [];
-    for (let i = 0; i <= 100; i++) {
-        let x = (i * L) / 100;
+    for (let i = 0; i <= steps; i++) {
+        let x = (i * L) / steps;
         labels.push(x.toFixed(2));
-        let Vx = Ra_y, Mx = (type === 'balanco') ? -Ma + (Ra_y * x) : Ra_y * x;
-        loads.filter(l => l.dir === 'y').forEach(l => {
-            if (x >= l.a) { Vx -= l.p; Mx -= l.p * (x - l.a); }
+        
+        let Vx = Ra_y;
+        let Mx = (type === 'balanco') ? -Ma + (Ra_y * x) : Ra_y * x;
+
+        loads.forEach(l => {
+            if (l.type === 'point' && x >= l.a) {
+                Vx -= l.p;
+                Mx -= l.p * (x - l.a);
+            } else if (l.type === 'dist' && x >= l.x1) {
+                let lenTotal = l.x2 - l.x1;
+                let m = (l.q2 - l.q1) / lenTotal;
+
+                if (x <= l.x2) {
+                    let dx = x - l.x1;
+                    let deltaV = l.q1 * dx + 0.5 * m * dx * dx;
+                    let deltaM = 0.5 * l.q1 * dx * dx + (1/6) * m * dx * dx * dx;
+                    Vx -= deltaV;
+                    Mx -= deltaM;
+                } else {
+                    let totalQ = l.q1 * lenTotal + 0.5 * m * lenTotal * lenTotal;
+                    let centroidRel = (l.q1 * lenTotal * lenTotal / 2 + m * lenTotal * lenTotal * lenTotal / 3) / totalQ;
+                    let globalCentroid = l.x1 + centroidRel;
+                    Vx -= totalQ;
+                    Mx -= totalQ * (x - globalCentroid);
+                }
+            }
         });
         dataV.push(Vx.toFixed(2));
         dataM.push(Mx.toFixed(2));
@@ -184,88 +331,120 @@ function calculateAll() {
     generatePiecewiseEquations(Ra_y, Ma, L, type);
 }
 
-/* --- GERAÇÃO DE EQUAÇÃO POR TRECHOS (O QUE VOCÊ PEDIU) --- */
+/* ==========================================================================
+   7. GERADOR DE EQUAÇÕES POR TRECHOS (Versão Segura com IDs Múltiplos)
+   ========================================================================== */
 function generatePiecewiseEquations(ra, ma, L, type) {
-    // Pegamos as posições únicas onde há cargas Y para definir os trechos
-    const stops = [0, ...new Set(loads.filter(l => l.dir === 'y').map(l => l.a)), L].sort((a,b) => a - b);
-    
+    const stops = [0, ...new Set(loads.flatMap(l => l.type === 'point' ? [l.a] : [l.x1, l.x2])), L].sort((a,b) => a - b);
     let vPieces = [], mPieces = [];
 
+    const formatPoly = (coeffs) => {
+        let terms = [];
+        for (let d = coeffs.length - 1; d >= 0; d--) {
+            let val = coeffs[d];
+            if (Math.abs(val) < 0.005) continue;
+            let str = terms.length > 0 ? (val > 0 ? " + " : " - ") : (val < 0 ? "-" : "");
+            let absVal = Math.abs(val).toFixed(2).replace(/\.00$/, '');
+            if (d === 0) str += absVal;
+            else if (d === 1) str += (absVal === "1" ? "" : absVal) + "x";
+            else str += (absVal === "1" ? "" : absVal) + `x^${d}`;
+            terms.push(str);
+        }
+        return terms.length === 0 ? "0" : terms.join("");
+    };
+
     for (let i = 0; i < stops.length - 1; i++) {
-        let xStart = stops[i];
-        let xEnd = stops[i+1];
-        let mid = (xStart + xEnd) / 2;
-
-        // Calcular valor de V e M no meio do trecho para montar a string
-        let currentV = ra;
-        let currentM = (type === 'balanco') ? `- ${ma.toFixed(2)} + ${ra.toFixed(2)}x` : `${ra.toFixed(2)}x`;
+        let x1 = stops[i], x2 = stops[i+1], mid = (x1 + x2) / 2;
         
-        let mTerms = (type === 'balanco') ? [-ma, ra] : [0, ra]; // [constante, termo_em_x]
+        let vCoeffs = [ra, 0, 0];
+        let mCoeffs = type === 'balanco' ? [-ma, ra, 0, 0] : [0, ra, 0, 0];
 
-        loads.filter(l => l.dir === 'y').forEach(l => {
-            if (mid >= l.a) {
-                currentV -= l.p;
-                mTerms[0] += (l.p * l.a);
-                mTerms[1] -= l.p;
+        loads.forEach(l => {
+            if (l.type === 'point' && mid >= l.a) {
+                vCoeffs[0] -= l.p;
+                mCoeffs[0] += (l.p * l.a);
+                mCoeffs[1] -= l.p;
+            } else if (l.type === 'dist' && mid >= l.x1) {
+                let lenTotal = l.x2 - l.x1;
+                let m = (l.q2 - l.q1) / lenTotal;
+
+                if (mid >= l.x2) {
+                    let totalQ = l.q1 * lenTotal + 0.5 * m * lenTotal * lenTotal;
+                    let centroidRel = (l.q1 * lenTotal * lenTotal / 2 + m * lenTotal * lenTotal * lenTotal / 3) / totalQ;
+                    let Cx = l.x1 + centroidRel;
+                    
+                    vCoeffs[0] -= totalQ;
+                    mCoeffs[0] += (totalQ * Cx);
+                    mCoeffs[1] -= totalQ;
+                } else {
+                    vCoeffs[2] -= (m / 2);
+                    vCoeffs[1] -= (l.q1 - m * l.x1);
+                    vCoeffs[0] -= (0.5 * m * l.x1 * l.x1 - l.q1 * l.x1);
+
+                    mCoeffs[3] -= (m / 6);
+                    mCoeffs[2] -= ((l.q1 - m * l.x1) / 2);
+                    mCoeffs[1] -= (0.5 * m * l.x1 * l.x1 - l.q1 * l.x1);
+                    mCoeffs[0] -= (l.q1 * l.x1 * l.x1 / 2 - m * l.x1 * l.x1 * l.x1 / 6);
+                }
             }
         });
 
-        // Formatação das strings LaTeX
-        let interval = `${xStart.toFixed(1)} \\le x < ${xEnd.toFixed(1)}`;
-        if (i === stops.length - 2) interval = `${xStart.toFixed(1)} \\le x \\le ${xEnd.toFixed(1)}`;
-
-        vPieces.push(`${currentV.toFixed(2)}, & \\text{se } ${interval}`);
+        let range = `${x1.toFixed(1)} \\le x < ${x2.toFixed(1)}`;
+        if (i === stops.length - 2) range = `${x1.toFixed(1)} \\le x \\le ${x2.toFixed(1)}`;
         
-        let mStr = `${mTerms[0].toFixed(2)} ${mTerms[1] >= 0 ? '+' : ''} ${mTerms[1].toFixed(2)}x`;
-        mPieces.push(`${mStr}, & \\text{se } ${interval}`);
+        vPieces.push(`${formatPoly(vCoeffs)}, & \\text{se } ${range}`);
+        mPieces.push(`${formatPoly(mCoeffs)}, & \\text{se } ${range}`);
     }
 
-    document.getElementById('equation-v').innerHTML = `$$ V(x) = \\begin{cases} ${vPieces.join('\\\\')} \\end{cases} $$`;
-    document.getElementById('equation-m').innerHTML = `$$ M(x) = \\begin{cases} ${mPieces.join('\\\\')} \\end{cases} $$`;
+    const divV = document.getElementById('eq-v') || document.getElementById('equation-v');
+    const divM = document.getElementById('eq-m') || document.getElementById('equation-m');
+
+    if (divV) divV.innerHTML = `$$ V(x) = \\begin{cases} ${vPieces.join('\\\\')} \\end{cases} $$`;
+    if (divM) divM.innerHTML = `$$ M(x) = \\begin{cases} ${mPieces.join('\\\\')} \\end{cases} $$`;
     
-    if (window.MathJax) MathJax.typesetPromise();
+    if (window.MathJax && MathJax.typesetPromise) {
+        MathJax.typesetPromise().catch((err) => console.log(err));
+    }
 }
 
-/* --- RENDERIZAÇÃO --- */
 function renderCharts(labels, v, m) {
-    if (chartV) chartV.destroy(); if (chartM) chartM.destroy();
-    const config = (ctx, label, data, color, rev) => new Chart(ctx, {
+    if (chartV) chartV.destroy();
+    if (chartM) chartM.destroy();
+
+    const config = (ctx, label, data, color, reverse) => new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets: [{ label, data, borderColor: color, backgroundColor: color + '22', fill: true, tension: 0, pointRadius: 0 }] },
-        options: { scales: { y: { reverse: rev } }, plugins: { legend: { display: false } } }
+        data: { labels, datasets: [{ label, data, borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.1, pointRadius: 0 }] },
+        options: { 
+            responsive: true,
+            scales: { y: { reverse: reverse, grid: { color: '#f3f4f6' } } },
+            plugins: { legend: { display: false } }
+        }
     });
+
     chartV = config(document.getElementById('chartV'), 'V', v, '#3b82f6', false);
     chartM = config(document.getElementById('chartM'), 'M', m, '#ef4444', true);
 }
 
 function renderSummary(ray, rby, ma, rax, type) {
     document.getElementById('result-summary').innerHTML = `
-        <div><p class="text-[10px] opacity-50 uppercase">Ra (Y)</p><p class="text-xl font-bold">${ray.toFixed(2)}kN</p></div>
-        <div><p class="text-[10px] opacity-50 uppercase">${type==='balanco'?'M. Engaste':'Rb (Y)'}</p><p class="text-xl font-bold">${type==='balanco'?ma.toFixed(2)+'kNm':rby.toFixed(2)+'kN'}</p></div>
-        <div><p class="text-[10px] opacity-50 uppercase">Reação (X)</p><p class="text-xl font-bold">${rax.toFixed(2)}kN</p></div>`;
+        <div><p class="text-[10px] opacity-50 uppercase">Ra (Y)</p><p class="text-xl font-bold">${ray.toFixed(2)} kN</p></div>
+        <div><p class="text-[10px] opacity-50 uppercase">${type === 'balanco' ? 'M. Engaste' : 'Rb (Y)'}</p><p class="text-xl font-bold">${type === 'balanco' ? ma.toFixed(2) + ' kNm' : rby.toFixed(2) + ' kN'}</p></div>
+        <div><p class="text-[10px] opacity-50 uppercase">Reação (X)</p><p class="text-xl font-bold">${rax.toFixed(2)} kN</p></div>
+    `;
 }
 
-// Inicializar Glossário
+/* ==========================================================================
+   8. INICIALIZAÇÃO DO SISTEMA
+   ========================================================================== */
 window.onload = () => {
+    currentLoadType = 'point';
+    
     const cats = ['Todos', ...new Set(GLOSSARIO.map(i => i.category))];
-    document.getElementById('category-filters').innerHTML = cats.map(c => `<button onclick="setCategory('${c}')" class="filter-btn ${c==='Todos'?'active-filter':''}">${c}</button>`).join('');
+    document.getElementById('category-filters').innerHTML = cats.map(c => 
+        `<button onclick="setCategory('${c}')" class="filter-btn ${c === 'Todos' ? 'active-filter' : ''}">${c}</button>`
+    ).join('');
+    
     renderGrid(GLOSSARIO);
 };
 
-function renderGrid(items) {
-    document.getElementById('grid-glossario').innerHTML = items.map(item => `
-        <div onclick="openModal(${GLOSSARIO.indexOf(item)})" class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm cursor-pointer flex flex-col items-center">
-            <img src="${item.image}" class="h-24 mb-4 object-contain">
-            <h3 class="font-bold text-gray-800">${item.term}</h3>
-        </div>`).join('');
-}
-function setCategory(cat) { currentCategory = cat; document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.toggle('active-filter', btn.innerText === cat)); filterContent(); }
-function openModal(idx) { 
-    const item = GLOSSARIO[idx];
-    document.getElementById('modal-content').innerHTML = `
-        <h2 class="text-3xl font-black text-blue-900">${item.term}</h2>
-        <p class="mt-4 text-gray-700">${item.definition}</p>
-        <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 italic text-blue-900">💡 ${item.description}</div>`;
-    document.getElementById('modal-container').classList.remove('hidden');
-}
-function closeModal() { document.getElementById('modal-container').classList.add('hidden'); }
+window.onclick = (e) => { if (e.target.id === 'modal-container') closeModal(); };

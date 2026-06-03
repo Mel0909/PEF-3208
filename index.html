@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mecânica Poli - Equações por Trechos</title>
+    <title>PEF-3208</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -44,7 +44,7 @@
         <section id="simulador" class="hidden animate-fadeIn">
             <div class="text-center mb-10">
                 <h2 class="text-4xl font-black text-blue-900 mb-2">Simulador Estrutural</h2>
-                <p class="text-gray-600 uppercase tracking-widest text-sm font-bold">Equações Definidas por Trechos</p>
+                <p class="text-gray-600 uppercase tracking-widest text-sm font-bold">Selecione o tipo, tamanho da viga e adicione as forças. Calcularemos o resto para você</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -66,17 +66,31 @@
                         </div>
 
                         <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
-                            <h4 class="font-bold text-sm text-blue-800 uppercase">Inserir Carga</h4>
-                            <div class="grid grid-cols-2 gap-2">
-                                <input type="number" id="load-p" placeholder="P [kN]" class="p-2 border rounded-lg">
-                                <input type="number" id="load-a" placeholder="Pos [m]" class="p-2 border rounded-lg">
+                            <h4 class="font-bold text-sm text-blue-800 uppercase text-center">Tipo de Carga</h4>
+                            <div class="flex gap-2">
+                                <button onclick="setLoadType('point')" id="btn-point" class="flex-1 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold">Pontual</button>
+                                <button onclick="setLoadType('dist')" id="btn-dist" class="flex-1 py-1 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition">Distribuída</button>
                             </div>
-                            <select id="load-dir" class="w-full p-2 border rounded-lg bg-white">
-                                <option value="y">Vertical (Y)</option>
-                                <option value="x">Horizontal (X)</option>
-                            </select>
-                            <button onclick="addLoad()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-blue-700 transition active:scale-95">+ Adicionar Carga</button>
-                            <button onclick="resetSim()" class="w-full bg-gray-200 text-gray-700 py-2 rounded-xl font-bold text-xs hover:bg-gray-300 transition">Limpar Tudo</button>
+
+                            <div id="form-point" class="grid grid-cols-2 gap-2">
+                                <input type="number" id="load-p" placeholder="P [kN]" class="p-2 border rounded-lg outline-none">
+                                <input type="number" id="load-a" placeholder="Pos [m]" class="p-2 border rounded-lg outline-none">
+                            </div>
+
+                            <div id="form-dist" class="hidden space-y-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="number" id="q1" placeholder="q1 [kN/m]" class="p-2 border rounded-lg outline-none">
+                                    <input type="number" id="q2" placeholder="q2 [kN/m]" class="p-2 border rounded-lg outline-none">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="number" id="x1" placeholder="Início [m]" class="p-2 border rounded-lg outline-none">
+                                    <input type="number" id="x2" placeholder="Fim [m]" class="p-2 border rounded-lg outline-none">
+                                </div>
+                            </div>
+
+                            <button onclick="addLoad()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition active:scale-95 shadow-md">
+                                + Inserir Carga
+                            </button>
                         </div>
 
                         <div id="load-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
@@ -112,3 +126,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
