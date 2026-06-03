@@ -1,5 +1,5 @@
 /* ==========================================================================
-   1. BANCO DE DADOS DO GLOSSÁRIO (Caminhos para 'img/')
+   1. BANCO DE DADOS DO GLOSSÁRIO
    ========================================================================== */
 const GLOSSARIO = [
     {
@@ -102,7 +102,7 @@ const GLOSSARIO = [
     },
     {
         "term": "Flexão Normal Simples",
-        "definition": "Estado onde atuam apenas momentos fletores, sem esfoço normal.",
+        "definition": "Estado onde atuam apenas momentos fletores, sem esforço normal.",
         "description": "Uma viga que está apenas dobrando, como uma prateleira de livros.",
         "image": "img/flexao-normal-simples.png",
         "category": "Tensões"
@@ -132,7 +132,7 @@ function showSection(id) {
 }
 
 /* ==========================================================================
-   3. LÓGICA DO GLOSSÁRIO (Renderização com Imagens Ampliadas)
+   3. LÓGICA DO GLOSSÁRIO
    ========================================================================== */
 function renderGrid(items) {
     const grid = document.getElementById('grid-glossario');
@@ -212,11 +212,13 @@ function addLoad() {
     if (currentLoadType === 'point') {
         const p = parseFloat(document.getElementById('load-p').value);
         const a = parseFloat(document.getElementById('load-a').value);
+        const dir = document.getElementById('load-dir').value;
+        
         if (isNaN(p) || isNaN(a) || a < 0 || a > L) {
             alert("Preencha os campos da carga pontual corretamente.");
             return;
         }
-        loads.push({ type: 'point', p, a, dir: 'y', id: Date.now() });
+        loads.push({ type: 'point', p, a, dir, id: Date.now() });
     } else {
         const q1 = parseFloat(document.getElementById('q1').value);
         const q2 = parseFloat(document.getElementById('q2').value);
@@ -253,7 +255,7 @@ function updateLoadList() {
     const list = document.getElementById('load-list');
     list.innerHTML = loads.map(l => `
         <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm mb-2 text-xs">
-            <span>${l.type === 'point' ? `<b>${l.p} kN</b> em ${l.a}m (Y)` : `<b>${l.q1}-${l.q2} kN/m</b> de ${l.x1} a ${l.x2}m`}</span>
+            <span>${l.type === 'point' ? `<b>${l.p} kN</b> em ${l.a}m (${l.dir.toUpperCase()})` : `<b>${l.q1}-${l.q2} kN/m</b> de ${l.x1} a ${l.x2}m`}</span>
             <button onclick="removeLoad(${l.id})" class="text-red-500 font-bold px-2 hover:text-red-700">✕</button>
         </div>
     `).join('');
@@ -272,23 +274,32 @@ function calculateAll() {
     
     loads.forEach(l => {
         if (l.type === 'point') {
-            if (type === 'biapoiada') {
-                let rb = (l.p * l.a) / L;
-                Rb_y += rb; Ra_y += (l.p - rb);
-            } else { Ra_y += l.p; Ma += (l.p * l.a); }
+            if (l.dir === 'x') {
+                Ra_x -= l.p; 
+            } else {
+                if (type === 'biapoiada') {
+                    let rb = -(l.p * l.a) / L;
+                    Rb_y += rb;
+                    Ra_y += (-l.p - rb);
+                } else { 
+                    Ra_y -= l.p; 
+                    Ma -= (l.p * l.a); 
+                }
+            }
         } else {
             const len = l.x2 - l.x1;
-            const forceRect = Math.min(l.q1, l.q2) * len;
-            const forceTri = 0.5 * Math.abs(l.q2 - l.q1) * len;
-            const totalQ = forceRect + forceTri;
-            const dTri = l.q2 > l.q1 ? l.x1 + (2/3)*len : l.x1 + (1/3)*len;
-            const dRect = l.x1 + len/2;
-            const centroid = totalQ > 0 ? (forceRect * dRect + forceTri * dTri) / totalQ : 0;
+            const totalQ = 0.5 * (l.q1 + l.q2) * len; 
+            
+            let centroidRel = Math.abs(l.q1 + l.q2) > 0.001 ? (len * (l.q1 + 2 * l.q2)) / (3 * (l.q1 + l.q2)) : len / 2;
+            const globalCentroid = l.x1 + centroidRel;
 
             if (type === 'biapoiada') {
-                let rb = (totalQ * centroid) / L;
-                Rb_y += rb; Ra_y += (totalQ - rb);
-            } else { Ra_y += totalQ; Ma += (totalQ * centroid); }
+                let rb = -(totalQ * globalCentroid) / L;
+                Rb_y += rb; Ra_y += (-totalQ - rb);
+            } else { 
+                Ra_y -= totalQ; 
+                Ma -= (totalQ * globalCentroid); 
+            }
         }
     });
 
@@ -300,25 +311,30 @@ function calculateAll() {
         let Mx = (type === 'balanco') ? -Ma + (Ra_y * x) : Ra_y * x;
 
         loads.forEach(l => {
-            if (l.type === 'point' && x >= l.a) {
-                Vx -= l.p;
-                Mx -= l.p * (x - l.a);
+            if (l.type === 'point' && l.dir === 'y' && x >= l.a) {
+                Vx += l.p; 
+                Mx += l.p * (x - l.a);
             } else if (l.type === 'dist' && x >= l.x1) {
                 let lenTotal = l.x2 - l.x1;
                 let m = (l.q2 - l.q1) / lenTotal;
 
                 if (x <= l.x2) {
                     let dx = x - l.x1;
-                    let deltaV = l.q1 * dx + 0.5 * m * dx * dx;
-                    let deltaM = 0.5 * l.q1 * dx * dx + (1/6) * m * dx * dx * dx;
-                    Vx -= deltaV;
-                    Mx -= deltaM;
+                    let q_x = l.q1 + m * dx;
+                    let resultanteLocal = 0.5 * (l.q1 + q_x) * dx;
+                    let centroideLocal = l.x1 + (dx * (l.q1 + 2 * q_x)) / (3 * (l.q1 + q_x));
+                    if (isNaN(centroideLocal)) centroideLocal = l.x1 + dx/2;
+
+                    Vx += resultanteLocal;
+                    Mx += resultanteLocal * (x - centroideLocal);
                 } else {
-                    let totalQ = l.q1 * lenTotal + 0.5 * m * lenTotal * lenTotal;
-                    let centroidRel = (l.q1 * lenTotal * lenTotal / 2 + m * lenTotal * lenTotal * lenTotal / 3) / totalQ;
+                    let totalQ = 0.5 * (l.q1 + l.q2) * lenTotal;
+                    let centroidRel = (lenTotal * (l.q1 + 2 * l.q2)) / (3 * (l.q1 + l.q2));
+                    if (isNaN(centroidRel)) centroidRel = lenTotal / 2;
                     let globalCentroid = l.x1 + centroidRel;
-                    Vx -= totalQ;
-                    Mx -= totalQ * (x - globalCentroid);
+
+                    Vx += totalQ;
+                    Mx += totalQ * (x - globalCentroid);
                 }
             }
         });
@@ -332,10 +348,10 @@ function calculateAll() {
 }
 
 /* ==========================================================================
-   7. GERADOR DE EQUAÇÕES POR TRECHOS (Versão Segura com IDs Múltiplos)
+   7. GERADOR DE EQUAÇÕES POR TRECHOS
    ========================================================================== */
 function generatePiecewiseEquations(ra, ma, L, type) {
-    const stops = [0, ...new Set(loads.flatMap(l => l.type === 'point' ? [l.a] : [l.x1, l.x2])), L].sort((a,b) => a - b);
+    const stops = [0, ...new Set(loads.flatMap(l => l.type === 'point' ? (l.dir === 'y' ? [l.a] : []) : [l.x1, l.x2])), L].sort((a,b) => a - b);
     let vPieces = [], mPieces = [];
 
     const formatPoly = (coeffs) => {
@@ -360,30 +376,31 @@ function generatePiecewiseEquations(ra, ma, L, type) {
         let mCoeffs = type === 'balanco' ? [-ma, ra, 0, 0] : [0, ra, 0, 0];
 
         loads.forEach(l => {
-            if (l.type === 'point' && mid >= l.a) {
-                vCoeffs[0] -= l.p;
-                mCoeffs[0] += (l.p * l.a);
-                mCoeffs[1] -= l.p;
+            if (l.type === 'point' && l.dir === 'y' && mid >= l.a) {
+                vCoeffs[0] += l.p;
+                mCoeffs[0] -= (l.p * l.a);
+                mCoeffs[1] += l.p;
             } else if (l.type === 'dist' && mid >= l.x1) {
                 let lenTotal = l.x2 - l.x1;
                 let m = (l.q2 - l.q1) / lenTotal;
 
                 if (mid >= l.x2) {
-                    let totalQ = l.q1 * lenTotal + 0.5 * m * lenTotal * lenTotal;
-                    let centroidRel = (l.q1 * lenTotal * lenTotal / 2 + m * lenTotal * lenTotal * lenTotal / 3) / totalQ;
+                    let totalQ = 0.5 * (l.q1 + l.q2) * lenTotal;
+                    let centroidRel = (lenTotal * (l.q1 + 2 * l.q2)) / (3 * (l.q1 + l.q2));
+                    if (isNaN(centroidRel)) centroidRel = lenTotal / 2;
                     let Cx = l.x1 + centroidRel;
                     
-                    vCoeffs[0] -= totalQ;
-                    mCoeffs[0] += (totalQ * Cx);
-                    mCoeffs[1] -= totalQ;
+                    vCoeffs[0] += totalQ;
+                    mCoeffs[0] -= (totalQ * Cx);
+                    mCoeffs[1] += totalQ;
                 } else {
-                    vCoeffs[2] -= (m / 2);
-                    vCoeffs[1] -= (l.q1 - m * l.x1);
-                    vCoeffs[0] -= (0.5 * m * l.x1 * l.x1 - l.q1 * l.x1);
+                    vCoeffs[2] += (m / 2);
+                    vCoeffs[1] += (l.q1 - m * l.x1);
+                    vCoeffs[0] += (0.5 * m * l.x1 * l.x1 - l.q1 * l.x1);
 
-                    mCoeffs[3] -= (m / 6);
-                    mCoeffs[2] -= ((l.q1 - m * l.x1) / 2);
-                    mCoeffs[1] -= (0.5 * m * l.x1 * l.x1 - l.q1 * l.x1);
+                    mCoeffs[3] += (m / 6);
+                    mCoeffs[2] += ((l.q1 - m * l.x1) / 2);
+                    mCoeffs[1] += (0.5 * m * l.x1 * l.x1 - l.q1 * l.x1);
                     mCoeffs[0] -= (l.q1 * l.x1 * l.x1 / 2 - m * l.x1 * l.x1 * l.x1 / 6);
                 }
             }
@@ -401,10 +418,7 @@ function generatePiecewiseEquations(ra, ma, L, type) {
 
     if (divV) divV.innerHTML = `$$ V(x) = \\begin{cases} ${vPieces.join('\\\\')} \\end{cases} $$`;
     if (divM) divM.innerHTML = `$$ M(x) = \\begin{cases} ${mPieces.join('\\\\')} \\end{cases} $$`;
-    
-    if (window.MathJax && MathJax.typesetPromise) {
-        MathJax.typesetPromise().catch((err) => console.log(err));
-    }
+    if (window.MathJax) MathJax.typesetPromise();
 }
 
 function renderCharts(labels, v, m) {

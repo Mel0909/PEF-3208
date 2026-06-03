@@ -72,9 +72,15 @@
                                 <button onclick="setLoadType('dist')" id="btn-dist" class="flex-1 py-1 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition">Distribuída</button>
                             </div>
 
-                            <div id="form-point" class="grid grid-cols-2 gap-2">
-                                <input type="number" id="load-p" placeholder="P [kN]" class="p-2 border rounded-lg outline-none">
-                                <input type="number" id="load-a" placeholder="Pos [m]" class="p-2 border rounded-lg outline-none">
+                            <div id="form-point" class="space-y-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="number" id="load-p" placeholder="P [kN]" class="p-2 border rounded-lg outline-none w-full">
+                                    <input type="number" id="load-a" placeholder="Pos [m]" class="p-2 border rounded-lg outline-none w-full">
+                                </div>
+                                <select id="load-dir" class="w-full p-2 border rounded-lg outline-none bg-white text-xs font-medium text-gray-600">
+                                    <option value="y">Vertical (Eixo Y - Fletora)</option>
+                                    <option value="x">Horizontal (Eixo X - Axial)</option>
+                                </select>
                             </div>
 
                             <div id="form-dist" class="hidden space-y-2">
