@@ -469,5 +469,4 @@ window.onload = () => {
     
     renderGrid(GLOSSARIO);
 };
-
 window.onclick = (e) => { if (e.target.id === 'modal-container') closeModal(); };
