@@ -352,7 +352,8 @@ function calculateAll() {
    7. GERADOR DE EQUAÇÕES POR TRECHOS
    ========================================================================== */
 function generatePiecewiseEquations(ra, ma, rax, L, type) {
-    const stops = [0, ...new Set(loads.flatMap(l => l.type === 'point' ? [l.a] : [l.x1, l.x2])), L].sort((a,b) => a - b);
+    // CORREÇÃO: O Set agora envolve os limites 0 e L para eliminar trechos redundantes de tamanho zero
+const stops = [...new Set([0, ...loads.flatMap(l => l.type === 'point' ? (l.dir === 'y' ? [l.a] : []) : [l.x1, l.x2]), L])].sort((a,b) => a - b);
     let nPieces = [], vPieces = [], mPieces = [];
 
     const formatPoly = (coeffs) => {
